@@ -5,6 +5,8 @@
 #include <ctime>
 #include <cmath>
 #include <cstdlib>
+#include <chrono>
+#include <thread>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
@@ -12,7 +14,7 @@
 
 using namespace std;
 
-// 颜色与样式（ANSI）
+// ANSI 颜色与样式
 const string RESET = "\033[0m";
 const string RED = "\033[31m";
 const string GREEN = "\033[32m";
@@ -20,6 +22,8 @@ const string YELLOW = "\033[33m";
 const string CYAN = "\033[36m";
 const string MAGENTA = "\033[35m";
 const string BOLD = "\033[1m";
+const string BLUE = "\033[34m";
+const string WHITE = "\033[37m";
 
 void enableAnsiColorsOnWindows() {
 #if defined(_WIN32) || defined(_WIN64)
@@ -65,6 +69,67 @@ bool parseIntString(const string& input, int& value) {
     if (ss.fail()) return false;
     char extra;
     return !(ss >> extra);
+}
+
+void sleepMs(int ms) {
+    this_thread::sleep_for(chrono::milliseconds(ms));
+}
+
+void printCentered(const string& text, int width = 60) {
+    int padding = max(0, (width - static_cast<int>(text.length())) / 2);
+    cout << string(padding, ' ') << text << endl;
+}
+
+void printHeader(const string& title) {
+    cout << BOLD << MAGENTA << separatorLine('=', 70) << RESET << endl;
+    printCentered(title, 70);
+    cout << BOLD << MAGENTA << separatorLine('=', 70) << RESET << endl;
+}
+
+void typeText(const string& text, int delay = 25) {
+    for (char ch : text) {
+        cout << ch;
+        cout.flush();
+        sleepMs(delay);
+    }
+    cout << endl;
+}
+
+void animateTitle() {
+    const string title = "C++ 学习工具盒";
+    for (int i = 0; i < 3; ++i) {
+        clearScreen();
+        cout << BOLD << CYAN;
+        printCentered(separatorLine('-', 40), 70);
+        printCentered(title, 70);
+        printCentered(separatorLine('-', 40), 70);
+        cout << RESET << endl;
+        sleepMs(180);
+        clearScreen();
+        cout << BOLD << YELLOW;
+        printCentered(separatorLine('-', 40), 70);
+        printCentered(title, 70);
+        printCentered(separatorLine('-', 40), 70);
+        cout << RESET << endl;
+        sleepMs(180);
+    }
+}
+
+void showLoadingAnimation(const string& message) {
+    cout << BOLD << CYAN << message << RESET;
+    for (int i = 0; i < 4; ++i) {
+        cout << ".";
+        cout.flush();
+        sleepMs(230);
+    }
+    cout << endl;
+}
+
+void showInfoPanel() {
+    cout << BOLD << BLUE << "===============================================" << RESET << endl;
+    cout << BOLD << WHITE << "  欢迎使用 C++ 学习与工具程序" << RESET << endl;
+    cout << BOLD << BLUE << "  学习 • 计算 • 娱乐 • 实用功能" << RESET << endl;
+    cout << BOLD << BLUE << "===============================================" << RESET << endl;
 }
 
 double readDouble(const string& prompt) {
@@ -115,12 +180,6 @@ int readIntChoice(const string& prompt, int minValue, int maxValue) {
 
         cout << RED << "无效输入，请输入 " << minValue << " 到 " << maxValue << " 之间的整数。" << RESET << endl;
     }
-}
-
-void printHeader(const string& title) {
-    cout << BOLD << MAGENTA << separatorLine('=', 60) << RESET << endl;
-    cout << BOLD << CYAN << "  " << title << RESET << endl;
-    cout << BOLD << MAGENTA << separatorLine('=', 60) << RESET << endl;
 }
 
 void addTwoNumbers() {
@@ -284,49 +343,75 @@ void multiplicationTable() {
 }
 
 void showMainMenu() {
-    cout << BOLD << separatorLine('=', 60) << RESET << endl;
-    cout << BOLD << CYAN << "          欢迎使用 C++ 学习与工具菜单程序" << RESET << endl;
-    cout << BOLD << separatorLine('=', 60) << RESET << endl;
+    clearScreen();
+    showInfoPanel();
 
-    cout << YELLOW << "1." << RESET << " 简单计算器" << endl;
-    cout << YELLOW << "2." << RESET << " 平均值计算器" << endl;
-    cout << YELLOW << "3." << RESET << " BMI 健康计算器" << endl;
-    cout << YELLOW << "4." << RESET << " 两数相加" << endl;
-    cout << YELLOW << "5." << RESET << " 显示当前时间" << endl;
-    cout << YELLOW << "6." << RESET << " 数字猜谜游戏" << endl;
-    cout << YELLOW << "7." << RESET << " 乘法表" << endl;
-    cout << YELLOW << "8." << RESET << " 退出" << endl;
+    cout << BOLD << BLUE << "┌" << separatorLine('─', 52) << "┐" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << CYAN << "  1.  简单计算器            " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << CYAN << "  2.  平均值计算器          " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << CYAN << "  3.  BMI 健康计算器        " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << CYAN << "  4.  两数相加              " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << CYAN << "  5.  显示当前时间          " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << CYAN << "  6.  数字猜谜游戏          " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << CYAN << "  7.  乘法表                " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "│" << RESET << BOLD << MAGENTA << "  8.  退出系统              " << RESET << BOLD << BLUE << "│" << RESET << endl;
+    cout << BOLD << BLUE << "└" << separatorLine('─', 52) << "┘" << RESET << endl;
     cout << endl;
+}
+
+void waitForContinue() {
+    cout << YELLOW << "按回车键继续..." << RESET;
+    string temp;
+    getline(cin, temp);
 }
 
 int main() {
     enableAnsiColorsOnWindows();
+    animateTitle();
 
     while (true) {
-        clearScreen();
         showMainMenu();
         int choice = readIntChoice("请选择 (1-8): ", 1, 8);
 
         cout << endl;
         switch (choice) {
-        case 1: calculator(); break;
-        case 2: averageCalculator(); break;
-        case 3: bmiCalculator(); break;
-        case 4: addTwoNumbers(); break;
-        case 5: showCurrentTime(); break;
-        case 6: guessNumberGame(); break;
-        case 7: multiplicationTable(); break;
+        case 1:
+            showLoadingAnimation("正在启动计算器");
+            calculator();
+            break;
+        case 2:
+            showLoadingAnimation("正在启动平均值计算器");
+            averageCalculator();
+            break;
+        case 3:
+            showLoadingAnimation("正在启动 BMI 计算器");
+            bmiCalculator();
+            break;
+        case 4:
+            showLoadingAnimation("正在启动两数相加功能");
+            addTwoNumbers();
+            break;
+        case 5:
+            showLoadingAnimation("正在获取当前时间");
+            showCurrentTime();
+            break;
+        case 6:
+            showLoadingAnimation("正在启动数字猜谜游戏");
+            guessNumberGame();
+            break;
+        case 7:
+            showLoadingAnimation("正在生成乘法表");
+            multiplicationTable();
+            break;
         case 8:
-            cout << GREEN << "再见！感谢使用本程序。" << RESET << endl;
+            cout << BOLD << GREEN << "再见！感谢使用本程序。" << RESET << endl;
             return 0;
         default:
             cout << RED << "无效选择，请重试。" << RESET << endl;
         }
 
         cout << endl;
-        cout << YELLOW << "按回车键继续..." << RESET;
-        string pause;
-        getline(cin, pause);
+        waitForContinue();
     }
 
     return 0;
