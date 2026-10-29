@@ -3,6 +3,8 @@
 #include <sstream>
 #include <limits>
 #include <ctime>
+#include <cmath>
+#include <cstdlib>
 
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
@@ -10,7 +12,7 @@
 
 using namespace std;
 
-// ÑÕÉ«ÓëÑùÊ½£¨ANSI£©
+// é¢œè‰²ä¸Žæ ·å¼ï¼ˆANSIï¼‰
 const string RESET = "\033[0m";
 const string RED = "\033[31m";
 const string GREEN = "\033[32m";
@@ -21,7 +23,6 @@ const string BOLD = "\033[1m";
 
 void enableAnsiColorsOnWindows() {
 #if defined(_WIN32) || defined(_WIN64)
-    // ³¢ÊÔÆôÓÃ Windows ¿ØÖÆÌ¨µÄÐéÄâÖÕ¶ËÐòÁÐÖ§³Ö
     HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
     if (hOut == INVALID_HANDLE_VALUE) return;
     DWORD dwMode = 0;
@@ -31,113 +32,209 @@ void enableAnsiColorsOnWindows() {
 #endif
 }
 
+void clearScreen() {
+#if defined(_WIN32) || defined(_WIN64)
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
 string separatorLine(char ch = '=', int width = 40) {
     return string(width, ch);
 }
 
-// ´ÓÒ»ÐÐ¶ÁÈ¡²¢½âÎöÎª double£¬Ö±µ½ÓÃ»§ÊäÈëºÏ·¨µÄÊý×ÖÎªÖ¹
+string trim(const string& input) {
+    size_t first = input.find_first_not_of(" \t\r\n");
+    if (first == string::npos) return "";
+    size_t last = input.find_last_not_of(" \t\r\n");
+    return input.substr(first, last - first + 1);
+}
+
+bool parseDoubleString(const string& input, double& value) {
+    stringstream ss(input);
+    ss >> value;
+    if (ss.fail()) return false;
+    char extra;
+    return !(ss >> extra);
+}
+
+bool parseIntString(const string& input, int& value) {
+    stringstream ss(input);
+    ss >> value;
+    if (ss.fail()) return false;
+    char extra;
+    return !(ss >> extra);
+}
+
 double readDouble(const string& prompt) {
     while (true) {
         cout << CYAN << prompt << RESET;
         string line;
-        if (!std::getline(cin, line)) {
-            // Óöµ½ EOF£ºÖØÖÃÁ÷²¢¼ÌÐø»òÍË³ö
+        if (!getline(cin, line)) {
             cin.clear();
             cout << endl;
             continue;
         }
 
-        // È¥³ýÊ×Î²¿Õ°×
-        size_t first = line.find_first_not_of(" \t\r\n");
-        if (first == string::npos) {
-            cout << YELLOW << "ÊäÈëÎª¿Õ£¬ÇëÊäÈëÊý×Ö¡£" << RESET << endl;
+        string trimmed = trim(line);
+        if (trimmed.empty()) {
+            cout << YELLOW << "è¾“å…¥ä¸ºç©ºï¼Œè¯·è¾“å…¥æ•°å­—ã€‚" << RESET << endl;
             continue;
         }
-        size_t last = line.find_last_not_of(" \t\r\n");
-        string trimmed = line.substr(first, last - first + 1);
 
-        // Ê¹ÓÃ stringstream ³¢ÊÔ½âÎö double£¬È·±£ÕûÐÐ¶¼ÊÇÊý×Ö£¨¿É´øÐ¡ÊýºÍ¸ººÅ£©
-        stringstream ss(trimmed);
-        double value;
-        if (ss >> value) {
-            // È·±£Ã»ÓÐ¶àÓàµÄ·Ç¿Õ×Ö·û
-            char extra;
-            if (ss >> extra) {
-                cout << YELLOW << "°üº¬¶àÓà×Ö·û£¬ÇëÖ»ÊäÈëÊý×Ö£¨ÀýÈç 12.34 »ò -5£©¡£" << RESET << endl;
-                continue;
-            }
+        double value = 0.0;
+        if (parseDoubleString(trimmed, value)) {
             return value;
         }
-        else {
-            cout << RED << "ÎÞÐ§Êý×Ö£¬ÇëÖØÊÔ¡£" << RESET << endl;
-            continue;
-        }
+
+        cout << RED << "æ— æ•ˆæ•°å­—ï¼Œè¯·é‡è¯•ã€‚" << RESET << endl;
     }
 }
 
-// ´ÓÒ»ÐÐ¶ÁÈ¡²¢½âÎöÎª int ²Ëµ¥Ñ¡Ôñ
-int readIntChoice(const string& prompt) {
+int readIntChoice(const string& prompt, int minValue, int maxValue) {
     while (true) {
         cout << CYAN << prompt << RESET;
         string line;
-        if (!std::getline(cin, line)) {
+        if (!getline(cin, line)) {
             cin.clear();
             cout << endl;
             continue;
         }
-        // trim
-        size_t first = line.find_first_not_of(" \t\r\n");
-        if (first == string::npos) {
-            cout << YELLOW << "ÊäÈëÎª¿Õ£¬ÇëÊäÈëÊý×ÖÑ¡Ïî¡£" << RESET << endl;
+
+        string trimmed = trim(line);
+        if (trimmed.empty()) {
+            cout << YELLOW << "è¾“å…¥ä¸ºç©ºï¼Œè¯·è¾“å…¥æ•´æ•°é€‰é¡¹ã€‚" << RESET << endl;
             continue;
         }
-        size_t last = line.find_last_not_of(" \t\r\n");
-        string trimmed = line.substr(first, last - first + 1);
 
-        stringstream ss(trimmed);
-        int value;
-        if (ss >> value) {
-            char extra;
-            if (ss >> extra) {
-                cout << YELLOW << "°üº¬¶àÓà×Ö·û£¬ÇëÖ»ÊäÈëÕûÊýÑ¡Ïî¡£" << RESET << endl;
-                continue;
-            }
+        int value = 0;
+        if (parseIntString(trimmed, value) && value >= minValue && value <= maxValue) {
             return value;
         }
-        else {
-            cout << RED << "ÎÞÐ§ÊäÈë£¬ÇëÊäÈëÊý×ÖÑ¡Ïî¡£" << RESET << endl;
+
+        cout << RED << "æ— æ•ˆè¾“å…¥ï¼Œè¯·è¾“å…¥ " << minValue << " åˆ° " << maxValue << " ä¹‹é—´çš„æ•´æ•°ã€‚" << RESET << endl;
+    }
+}
+
+void printHeader(const string& title) {
+    cout << BOLD << MAGENTA << separatorLine('=', 60) << RESET << endl;
+    cout << BOLD << CYAN << "  " << title << RESET << endl;
+    cout << BOLD << MAGENTA << separatorLine('=', 60) << RESET << endl;
+}
+
+void addTwoNumbers() {
+    printHeader("ä¸¤æ•°ç›¸åŠ ");
+    double a = readDouble("è¯·è¾“å…¥ç¬¬ä¸€ä¸ªæ•°: ");
+    double b = readDouble("è¯·è¾“å…¥ç¬¬äºŒä¸ªæ•°: ");
+    double sum = a + b;
+    cout << GREEN << "ç»“æžœ: " << a << " + " << b << " = " << sum << RESET << endl;
+    cout << MAGENTA << separatorLine('-', 40) << RESET << endl;
+}
+
+void calculator() {
+    printHeader("ç®€å•è®¡ç®—å™¨");
+    cout << YELLOW << "æ”¯æŒè¿ç®—ï¼š+  -  *  /  %" << RESET << endl;
+
+    while (true) {
+        double a = readDouble("è¯·è¾“å…¥ç¬¬ä¸€ä¸ªæ•°: ");
+
+        string opInput;
+        char op = '?';
+        while (true) {
+            cout << CYAN << "è¯·é€‰æ‹©è¿ç®—ç¬¦ (+, -, *, /, %): " << RESET;
+            if (!getline(cin, opInput)) {
+                cin.clear();
+                cout << endl;
+                continue;
+            }
+            opInput = trim(opInput);
+            if (opInput.size() == 1 && (opInput[0] == '+' || opInput[0] == '-' || opInput[0] == '*' || opInput[0] == '/' || opInput[0] == '%')) {
+                op = opInput[0];
+                break;
+            }
+            cout << RED << "è¿ç®—ç¬¦æ— æ•ˆï¼Œè¯·é‡æ–°è¾“å…¥ã€‚" << RESET << endl;
+        }
+
+        double b = readDouble("è¯·è¾“å…¥ç¬¬äºŒä¸ªæ•°: ");
+        double result = 0.0;
+
+        if (op == '+') {
+            result = a + b;
+        } else if (op == '-') {
+            result = a - b;
+        } else if (op == '*') {
+            result = a * b;
+        } else if (op == '/') {
+            if (fabs(b) < 1e-12) {
+                cout << RED << "é™¤æ•°ä¸èƒ½ä¸º 0ã€‚" << RESET << endl;
+                continue;
+            }
+            result = a / b;
+        } else if (op == '%') {
+            if (fabs(b) < 1e-12) {
+                cout << RED << "æ¨¡è¿ç®—æ—¶é™¤æ•°ä¸èƒ½ä¸º 0ã€‚" << RESET << endl;
+                continue;
+            }
+            result = fmod(a, b);
+        }
+
+        cout << GREEN << "ç»“æžœ: " << a << " " << op << " " << b << " = " << result << RESET << endl;
+
+        cout << YELLOW << "æ˜¯å¦ç»§ç»­è®¡ç®—ï¼Ÿ (Y/N): " << RESET;
+        string again;
+        getline(cin, again);
+        again = trim(again);
+        if (again.empty() || again[0] == 'n' || again[0] == 'N') {
+            break;
         }
     }
 }
 
-void option1() {
-    cout << GREEN << "Ö´ÐÐ ¹¦ÄÜ 1 µÄ²Ù×÷£¨Õ¼Î»£©..." << RESET << endl;
-    // TODO: ÔÚ´ËÊµÏÖ¹¦ÄÜ 1
+void averageCalculator() {
+    printHeader("å¹³å‡å€¼è®¡ç®—å™¨");
+    int count = readIntChoice("è¯·è¾“å…¥è¦ç»Ÿè®¡çš„æ•°é‡ (1-100): ", 1, 100);
+
+    double total = 0.0;
+    for (int i = 1; i <= count; ++i) {
+        double value = readDouble("è¯·è¾“å…¥ç¬¬ " + to_string(i) + " ä¸ªæ•°: ");
+        total += value;
+    }
+
+    double average = total / count;
+    cout << GREEN << "æ€»å’Œ: " << total << RESET << endl;
+    cout << GREEN << "å¹³å‡å€¼: " << average << RESET << endl;
 }
 
-void option2() {
-    cout << GREEN << "Ö´ÐÐ ¹¦ÄÜ 2 µÄ²Ù×÷£¨Õ¼Î»£©..." << RESET << endl;
-    // TODO: ÔÚ´ËÊµÏÖ¹¦ÄÜ 2
+void bmiCalculator() {
+    printHeader("BMI å¥åº·è®¡ç®—å™¨");
+    double height = readDouble("è¯·è¾“å…¥èº«é«˜ï¼ˆç±³ï¼Œä¾‹å¦‚ 1.75ï¼‰: ");
+    double weight = readDouble("è¯·è¾“å…¥ä½“é‡ï¼ˆkgï¼Œä¾‹å¦‚ 65ï¼‰: ");
+
+    if (height <= 0 || weight <= 0) {
+        cout << RED << "èº«é«˜å’Œä½“é‡å¿…é¡»å¤§äºŽ 0ã€‚" << RESET << endl;
+        return;
+    }
+
+    double bmi = weight / (height * height);
+    string category;
+
+    if (bmi < 18.5) {
+        category = "åç˜¦";
+    } else if (bmi < 24) {
+        category = "æ­£å¸¸";
+    } else if (bmi < 28) {
+        category = "è¶…é‡";
+    } else {
+        category = "è‚¥èƒ–";
+    }
+
+    cout << GREEN << "BMI = " << bmi << RESET << endl;
+    cout << YELLOW << "ä½“åž‹è¯„ä¼°ï¼š" << category << RESET << endl;
 }
 
-void option3() {
-    cout << GREEN << "Ö´ÐÐ ¹¦ÄÜ 3 µÄ²Ù×÷£¨Õ¼Î»£©..." << RESET << endl;
-    // TODO: ÔÚ´ËÊµÏÖ¹¦ÄÜ 3
-}
-
-// ÐÂÔö£º¼ÆËãÁ½ÊýÏà¼Ó
-void addTwoNumbers() {
-    cout << MAGENTA << separatorLine('-', 40) << RESET << endl;
-    cout << BOLD << "Á½ÊýÏà¼Ó" << RESET << endl;
-    double a = readDouble("ÇëÊäÈëµÚÒ»¸öÊý: ");
-    double b = readDouble("ÇëÊäÈëµÚ¶þ¸öÊý: ");
-    double sum = a + b;
-    cout << GREEN << "½á¹û: " << a << " + " << b << " = " << sum << RESET << endl;
-    cout << MAGENTA << separatorLine('-', 40) << RESET << endl;
-}
-
-// ÑÝÊ¾ÓÃ£ºÏÔÊ¾µ±Ç°Ê±¼ä£¨±£Áô£©
 void showCurrentTime() {
+    printHeader("å½“å‰æ—¶é—´");
     time_t t = time(nullptr);
     tm local_tm;
 #if defined(_WIN32) || defined(_WIN64)
@@ -147,42 +244,90 @@ void showCurrentTime() {
 #endif
     char buf[64];
     strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &local_tm);
-    cout << GREEN << "µ±Ç°Ê±¼ä: " << buf << RESET << endl;
+    cout << GREEN << "å½“å‰æ—¶é—´: " << buf << RESET << endl;
+}
+
+void guessNumberGame() {
+    printHeader("æ•°å­—çŒœè°œæ¸¸æˆ");
+    srand(static_cast<unsigned int>(time(nullptr)));
+    int target = rand() % 100 + 1;
+    int attempts = 0;
+
+    cout << YELLOW << "æˆ‘å·²ç»æƒ³å¥½äº†ä¸€ä¸ª 1 åˆ° 100 ä¹‹é—´çš„æ•°å­—ï¼Œå¼€å§‹çŒœå§ï¼" << RESET << endl;
+
+    while (true) {
+        int guess = readIntChoice("è¯·è¾“å…¥ä½ çš„çŒœæµ‹ (1-100): ", 1, 100);
+        attempts++;
+
+        if (guess < target) {
+            cout << RED << "åå°ï¼Œç»§ç»­åŠªåŠ›ï¼" << RESET << endl;
+        } else if (guess > target) {
+            cout << RED << "åå¤§ï¼Œç»§ç»­è°ƒæ•´ï¼" << RESET << endl;
+        } else {
+            cout << GREEN << "æ­å–œä½ ï¼ŒçŒœå¯¹äº†ï¼ç­”æ¡ˆæ˜¯ " << target << "ï¼Œä½ ä¸€å…±ç”¨äº† " << attempts << " æ¬¡ã€‚" << RESET << endl;
+            break;
+        }
+    }
+}
+
+void multiplicationTable() {
+    printHeader("ä¹˜æ³•è¡¨");
+    int maxNumber = readIntChoice("è¯·è¾“å…¥ä¹˜æ³•è¡¨æœ€å¤§å€¼ (1-12): ", 1, 12);
+
+    for (int i = 1; i <= maxNumber; ++i) {
+        cout << YELLOW;
+        for (int j = 1; j <= 9; ++j) {
+            cout << i << " * " << j << " = " << i * j << "\t";
+        }
+        cout << RESET << endl;
+    }
+}
+
+void showMainMenu() {
+    cout << BOLD << separatorLine('=', 60) << RESET << endl;
+    cout << BOLD << CYAN << "          æ¬¢è¿Žä½¿ç”¨ C++ å­¦ä¹ ä¸Žå·¥å…·èœå•ç¨‹åº" << RESET << endl;
+    cout << BOLD << separatorLine('=', 60) << RESET << endl;
+
+    cout << YELLOW << "1." << RESET << " ç®€å•è®¡ç®—å™¨" << endl;
+    cout << YELLOW << "2." << RESET << " å¹³å‡å€¼è®¡ç®—å™¨" << endl;
+    cout << YELLOW << "3." << RESET << " BMI å¥åº·è®¡ç®—å™¨" << endl;
+    cout << YELLOW << "4." << RESET << " ä¸¤æ•°ç›¸åŠ " << endl;
+    cout << YELLOW << "5." << RESET << " æ˜¾ç¤ºå½“å‰æ—¶é—´" << endl;
+    cout << YELLOW << "6." << RESET << " æ•°å­—çŒœè°œæ¸¸æˆ" << endl;
+    cout << YELLOW << "7." << RESET << " ä¹˜æ³•è¡¨" << endl;
+    cout << YELLOW << "8." << RESET << " é€€å‡º" << endl;
+    cout << endl;
 }
 
 int main() {
     enableAnsiColorsOnWindows();
 
     while (true) {
-        cout << BOLD << separatorLine('=', 50) << RESET << endl;
-        cout << BOLD << CYAN << "          »¶Ó­Ê¹ÓÃ C++ ²Ëµ¥³ÌÐò" << RESET << endl;
-        cout << BOLD << separatorLine('=', 50) << RESET << endl;
-
-        cout << YELLOW << "1." << RESET << " ¹¦ÄÜ 1" << endl;
-        cout << YELLOW << "2." << RESET << " ¹¦ÄÜ 2" << endl;
-        cout << YELLOW << "3." << RESET << " ¹¦ÄÜ 3" << endl;
-        cout << YELLOW << "4." << RESET << " Á½ÊýÏà¼Ó£¨ÐÂ¹¦ÄÜ£©" << endl;
-        cout << YELLOW << "5." << RESET << " ÏÔÊ¾µ±Ç°Ê±¼ä" << endl;
-        cout << YELLOW << "0." << RESET << " ÍË³ö" << endl;
-
-        cout << endl;
-        int choice = readIntChoice("ÇëÑ¡Ôñ (0-5): ");
+        clearScreen();
+        showMainMenu();
+        int choice = readIntChoice("è¯·é€‰æ‹© (1-8): ", 1, 8);
 
         cout << endl;
         switch (choice) {
-        case 1: option1(); break;
-        case 2: option2(); break;
-        case 3: option3(); break;
-        case 4: addTwoNumbers(); break; // ÐÂÔö´¦Àí
+        case 1: calculator(); break;
+        case 2: averageCalculator(); break;
+        case 3: bmiCalculator(); break;
+        case 4: addTwoNumbers(); break;
         case 5: showCurrentTime(); break;
-        case 0:
-            cout << GREEN << "ÔÙ¼û£¡" << RESET << endl;
+        case 6: guessNumberGame(); break;
+        case 7: multiplicationTable(); break;
+        case 8:
+            cout << GREEN << "å†è§ï¼æ„Ÿè°¢ä½¿ç”¨æœ¬ç¨‹åºã€‚" << RESET << endl;
             return 0;
         default:
-            cout << RED << "ÎÞÐ§Ñ¡Ôñ£¬ÇëÖØÊÔ¡£" << RESET << endl;
+            cout << RED << "æ— æ•ˆé€‰æ‹©ï¼Œè¯·é‡è¯•ã€‚" << RESET << endl;
         }
 
         cout << endl;
+        cout << YELLOW << "æŒ‰å›žè½¦é”®ç»§ç»­..." << RESET;
+        string pause;
+        getline(cin, pause);
     }
+
     return 0;
 }
